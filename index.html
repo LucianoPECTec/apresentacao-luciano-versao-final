@@ -1,584 +1,477 @@
-<!DOCTYPE html>
-<html lang="pt-BR" class="scroll-smooth">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plano de Gestão 2026 | PEI Jamil Khauan</title>
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Search, CheckCircle, XCircle, Briefcase, Download, Star, MapPin, 
+  Grid, List, ChevronDown, ChevronUp, UserCheck, Home, ArrowRight 
+} from 'lucide-react';
 
-    <script src="https://cdn.tailwindcss.com"></script>
+// --- DADOS BRUTOS ---
+const rawData = {
+  "EE Alberto Andaló": [
+    "Adriano Antonio Martinez", "Gilberto Matias Os Santos", "Keila Regina Vila Alves", "Luciano Julio Da Silva",
+    "Luis Fernando Da Silva", "Marcio Ribeiro De Aguiar", "Marly Silvia Carmona De Matos", "Natália Aparecida Ribeiro Gomes",
+    "Sandrelly Kleim Valias Pereira", "Silvia Cristina Alixame Duarte", "Sirlene Aparecida Passetti", "Vania Oliani",
+    "Walquiria Solange Pipino"
+  ],
+  "EE Maria de Lourdes Murad de Camargo": [
+    "Fábio Serra", "Keila Regina Vila Alves", "Luciano Julio da Silva", "Luis Fernando da Silva", "Marcio Ribeiro de Aguiar",
+    "Marli dos Santos Almeida Freitas", "Natália Aparecida Ribeiro Gomes", "Rodrigo Francisco Andrade", "Sandrelly Kleim Valias Pereira",
+    "Sirlene Aparecida Passetti"
+  ],
+  "EE Jamil Khauan": [
+    "Adriano Antonio Martinez", "Clodoaldo Zevoli Paniche", "Fábio Serra", "Keila Regina Vila Alves", "Luis Alberto De Souza Junior",
+    "Luis Fernando Da Silva", "Marcio Ribeiro De Aguiar", "Nadir Marques Ferreira Fernandes", "Natália Aparecida Ribeiro Gomes",
+    "Priscila Toscano De Lima", "Ricardo Manaia Perez", "Rodrigo Francisco Andrade", "Rodrigo Franscisco Andrade",
+    "Rubens Ricardo Garcia Lopes", "Sandrelly Kleim Valias Pereira", "Silvia Cristina Alixame Duarte", "Sirlene Aparecida Passetti",
+    "Valéria Márcia Lara Dos Santos Gauch", "Walquiria Solange Pipino"
+  ],
+  "EE Dinorath do Valle": [
+    "ADRIANO ANTONIO MARTINEZ", "Clodoaldo Zevoli Paniche", "Helen Carolina Carvalho dos Santos Schaibe", "JOSE TADEU RAMOS",
+    "KARINA APARECIDA VIEIRA CARVALHO", "KEILA REGINA VILA ALVES", "Luciano Julio da Silva", "LUIS FERNANDO DA SILVA",
+    "Marcio Ribeiro de Aguiar", "Natália Aparecida Ribeiro Gomes", "Rodrigo Francisco Andrade", "Sandrelly Kleim Valias Pereira",
+    "Silvia Cristina Alixame Duarte", "SIRLENE APARECIDA PASSETTI", "Walquiria Solange Pipino"
+  ],
+  "EE Oscar Salgado Bueno": [
+    "Adriano Antonio Martinez", "Alexandre Ferreira dos Santos", "Clodoaldo Zevoli Paniche", "Fábio Serra", "Keila Regina Vila Alves",
+    "Luciano Julio da Silva", "Luis Fernando da Silva", "Marcio Ribeiro de Aguiar", "Marli dos Santos Almeida Freitas",
+    "Natália Aparecida Ribeiro Gomes", "Pedro Jadson Froes Mendonca Usai", "Ricardo Manaia Perez", "Rodrigo Francisco Andrade",
+    "Rodrigo Francisco Andrade", "Rubens Ricardo Garcia Lopes", "Sandrelly Kleim Valias Pereira", "Silvia Cristina Alixame Duarte",
+    "Sirlene Aparecida Passetti", "Vânia de Fátima Muniz de Freitas Geraldo", "Walquiria Solange Pipino"
+  ],
+  "EE Padre Clemente Marton Segura": [
+    "Adriano Antonio Martinez", "Gilberto Matias dos Santos", "Keila Regina Vila Alves", "Luciano Julio da Silva",
+    "Luis Fernando da Silva", "Marcio Ribeiro de Aguiar", "Marly Silvia Carmona de Matos", "Natália Aparecida Ribeiro Gomes",
+    "Sandrelly Kleim Valias Pereira", "Silvia Cristina Alixame Duarte", "Sirlene Aparecida Passetti", "Vania Oliani",
+    "Walquiria Solange Pipino"
+  ]
+};
+
+// CONFIRMADO: Jamil e Oscar são PEI.
+const PEI_SCHOOLS = [
+  "EE Jamil Khauan",
+  "EE Oscar Salgado Bueno"
+];
+
+const App = () => {
+  const [candidates, setCandidates] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterRole, setFilterRole] = useState("todos");
+  const [viewMode, setViewMode] = useState("table"); 
+  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'ascending' });
+
+  useEffect(() => {
+    const processedMap = new Map();
+    const schoolNames = Object.keys(rawData);
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
+    // Lista de escolas possíveis para "Origem" (inclui as do processo + opção externa)
+    const possibleOrigins = [...schoolNames, "Outra Escola / DE"];
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        pei: {
-                            green: '#008568', /* Verde Institucional */
-                            dark: '#1A1A1A',  /* Preto Suave */
-                            gray: '#F3F4F6',
-                        }
-                    },
-                    boxShadow: {
-                        'pop': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                    }
-                }
-            }
+    schoolNames.forEach((schoolName) => {
+      rawData[schoolName].forEach(rawName => {
+        let name = rawName.trim().toUpperCase();
+        if (name === "RODRIGO FRANSCISCO ANDRADE") name = "RODRIGO FRANCISCO ANDRADE";
+
+        if (!processedMap.has(name)) {
+          const randomRole = Math.random() > 0.6 ? "Gestor (Diretor/Vice)" : "Professor";
+          const hasPeiExp = Math.random() > 0.4;
+          
+          // Simulação da Escola de Origem (Para dados reais, isso viria do banco de dados)
+          // Lógica: 30% de chance de ser de uma das escolas que ele escolheu (candidato da casa)
+          const isFromListedSchool = Math.random() > 0.7;
+          let simulatedOrigin = "Outra Escola / DE";
+          
+          if (isFromListedSchool) {
+             // Pega uma escola aleatória da lista rawData
+             simulatedOrigin = schoolNames[Math.floor(Math.random() * schoolNames.length)];
+          }
+
+          processedMap.set(name, {
+            id: name.replace(/\s+/g, '-'),
+            name: rawName
+              .toLowerCase()
+              .split(' ')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' '), 
+            schools: [schoolName],
+            role: randomRole,
+            originSchool: simulatedOrigin, // Nova propriedade
+            de: "D.E. São José do Rio Preto",
+            pei: hasPeiExp,
+            expertiseScore: 0
+          });
+        } else {
+          const entry = processedMap.get(name);
+          if (!entry.schools.includes(schoolName)) {
+            entry.schools.push(schoolName);
+          }
+          // Ajuste fino da simulação: se a escola atual for a origem simulada, garantimos a consistência
+          if (entry.originSchool === schoolName) {
+             // Mantém
+          }
         }
-    </script>
+      });
+    });
 
-    <style>
-        section[id] { scroll-margin-top: 100px; }
-        .font-elegant { font-family: 'Playfair Display', serif; }
+    const candidatesArray = Array.from(processedMap.values()).map(c => {
+      const appliedPeiCount = c.schools.filter(s => PEI_SCHOOLS.includes(s)).length;
+      
+      // Verifica se está concorrendo na própria sede
+      const isCompetingInOrigin = c.schools.includes(c.originSchool);
+
+      let score = 0;
+      if (appliedPeiCount >= 2) score = 3;
+      else if (appliedPeiCount === 1) score = 2;
+      else score = 1;
+
+      if (c.pei) score += 1;
+      if (score > 3) score = 3;
+      
+      return { ...c, expertiseScore: score, isCompetingInOrigin };
+    });
+
+    setCandidates(candidatesArray);
+  }, []);
+
+  const togglePei = (id) => {
+    setCandidates(prev => prev.map(c => c.id === id ? { ...c, pei: !c.pei } : c));
+  };
+
+  const toggleRole = (id) => {
+    setCandidates(prev => prev.map(c => c.id === id ? { ...c, role: c.role.includes("Gestor") ? "Professor" : "Gestor (Diretor/Vice)" } : c));
+  };
+
+  const requestSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const processedCandidates = useMemo(() => {
+    let filtered = candidates.filter(c => {
+      const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = filterRole === "todos" ? true : 
+                          filterRole === "gestor" ? c.role.includes("Gestor") : 
+                          !c.role.includes("Gestor");
+      return matchesSearch && matchesRole;
+    });
+
+    if (sortConfig.key) {
+      filtered.sort((a, b) => {
+        let valA = a[sortConfig.key];
+        let valB = b[sortConfig.key];
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
         
-        .pop-card {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            z-index: 1;
-        }
-        
-        .pop-card:hover {
-            transform: translateY(-8px) scale(1.03);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            border-color: #008568;
-            z-index: 10;
-        }
+        // Sort booleans
+        if (typeof valA === 'boolean') valA = valA ? 1 : 0;
+        if (typeof valB === 'boolean') valB = valB ? 1 : 0;
 
-        .pop-card-dark:hover {
-            background-color: #1A1A1A !important;
-            border-color: #008568;
-        }
+        if (valA < valB) return sortConfig.direction === 'ascending' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'ascending' ? 1 : -1;
+        return 0;
+      });
+    }
+    return filtered;
+  }, [candidates, searchTerm, filterRole, sortConfig]);
 
-        /* Botão Pulsante */
-        @keyframes pulse-green {
-            0% { box-shadow: 0 0 0 0 rgba(0, 133, 104, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(0, 133, 104, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 133, 104, 0); }
-        }
-        .btn-pulse { animation: pulse-green 2s infinite; }
-    </style>
-</head>
-<body class="bg-white text-pei-dark antialiased leading-relaxed selection:bg-pei-green selection:text-white">
+  const schoolNames = Object.keys(rawData);
 
-    <header class="fixed top-0 w-full bg-white/95 backdrop-blur-sm shadow-sm border-b-4 border-pei-green z-50">
-        <nav class="max-w-7xl mx-auto px-6 h-24 flex items-center justify-between">
-            <div class="flex items-center gap-3 group">
-                <div class="flex flex-col items-start">
-                    <span class="text-[10px] uppercase tracking-[0.2em] text-pei-green font-bold leading-none mb-1">Programa</span>
-                    <span class="text-2xl font-black tracking-tighter text-pei-dark leading-none group-hover:text-pei-green transition-colors">ENSINO INTEGRAL</span>
-                </div>
-                <div class="h-8 w-px bg-gray-300 mx-2"></div>
-                <div class="flex flex-col">
-                    <span class="text-sm font-bold text-gray-800">E.E. Jamil Khauan</span>
-                    <span class="text-xs text-gray-500">Plano de Gestão 2026</span>
-                </div>
-            </div>
-            
-            <div class="hidden xl:flex items-center space-x-6 text-sm font-semibold text-gray-600">
-                <a href="#inicio" class="hover:text-pei-green transition-colors">Início</a>
-                <a href="#dna" class="hover:text-pei-green transition-colors">DNA</a>
-                <a href="#pdca" class="hover:text-pei-green transition-colors">PDCA</a>
-                <a href="#cenario" class="hover:text-pei-green transition-colors">Cenário</a>
-                <a href="#pedagogico" class="hover:text-pei-green transition-colors">Pedagógico</a>
-                <a href="#gestao" class="hover:text-pei-green transition-colors">Gestão</a>
-                <a href="https://lucianopectec.github.io/SARESP-2025-FAGGIN/" target="_blank" class="flex items-center gap-2 bg-pei-green text-white px-4 py-2 rounded-lg hover:bg-green-800 transition shadow-lg transform hover:-translate-y-1">
-                    <span>📊 Ver Painel de Dados</span>
-                </a>
-            </div>
+  const renderExpertise = (score) => (
+    <div className="flex text-yellow-500">
+      {[...Array(3)].map((_, i) => (
+        <Star key={i} size={14} fill={i < score ? "currentColor" : "none"} className={i < score ? "" : "text-slate-300"} />
+      ))}
+    </div>
+  );
 
-            <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="xl:hidden p-2 text-pei-green">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-            </button>
-        </nav>
-
-        <div id="mobile-menu" class="hidden xl:hidden bg-white border-t border-gray-100 p-4 shadow-xl">
-            <div class="flex flex-col space-y-3 font-medium text-gray-700">
-                <a href="#inicio" class="block hover:text-pei-green">Início</a>
-                <a href="#pdca" class="block hover:text-pei-green">PDCA</a>
-                <a href="#pedagogico" class="block hover:text-pei-green">Pedagógico</a>
-                <a href="https://lucianopectec.github.io/SARESP-2025-FAGGIN/" target="_blank" class="block font-bold text-pei-green">📊 Ver Painel de Dados</a>
-            </div>
-        </div>
-    </header>
-
-    <section id="inicio" class="pt-40 pb-20 bg-gradient-to-b from-gray-50 to-white">
-        <div class="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-pei-green text-xs font-bold uppercase tracking-wider mb-6">
-                    <span class="w-2 h-2 rounded-full bg-pei-green"></span>
-                    Candidato a Diretor
-                </div>
-                <h1 class="text-5xl lg:text-6xl font-black text-pei-dark mb-6 leading-tight">
-                    Foco em Resultados e <span class="text-pei-green">Modernização Pedagógica</span>
-                </h1>
-                <p class="text-lg text-gray-600 font-light mb-8 leading-relaxed">
-                    Uma gestão pautada no realismo e na análise de dados, garantindo equidade, acolhimento real e a melhoria contínua dos indicadores de aprendizagem.
-                </p>
-                
-                <div class="border-l-4 border-pei-green pl-6 py-2">
-                    <h3 class="text-2xl font-bold text-pei-dark">Luciano Julio</h3>
-                    <p class="text-gray-500 text-sm mb-4">Gestor Escolar • Professor • Coordenador</p>
-                    <ul class="space-y-2 text-sm text-gray-700 font-medium">
-                        <li class="flex items-center gap-2"><span class="text-pei-green">🎓</span> MBA em Gestão Escolar (USP - Cursando)</li>
-                        <li class="flex items-center gap-2"><span class="text-gray-400">🎓</span> Tecnólogo em Produção Audiovisual - FIAM-FAAM 2021</li>
-                        <li class="flex items-center gap-2"><span class="text-gray-400">🎓</span> Estudos Sociais: Licenciatura Plena em História</li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-1 gap-4">
-                <div class="pop-card bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <div class="flex justify-between items-start">
-                        <span class="text-xs font-bold text-pei-green uppercase">Atual</span>
-                        <a href="https://padlet.com/lucianojulio1/cgpac-jo-o-ernesto-faggin-vtw7yw6b8vyftcvk" target="_blank" class="text-xs font-bold text-gray-400 hover:text-pei-green flex items-center transition-colors group">
-                            <span class="mr-1 group-hover:underline">Ver Padlet</span>
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                        </a>
-                    </div>
-                    <h3 class="font-bold text-lg text-pei-dark mt-1">CGPAC (Ciências Humanas)</h3>
-                    <p class="text-sm text-gray-500 mb-2">PEI João Ernesto Faggin</p>
-                    <p class="text-sm text-gray-600 leading-relaxed">Vivência prática da rotina PEI. Aplicação de metodologias ativas, gamificação, uso de tecnologias, análise de dados para tomada de decisões e formação de professores.</p>
-                </div>
-
-                <div class="pop-card bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <div class="flex justify-between items-start">
-                        <h3 class="font-bold text-lg text-pei-dark">PEC de Tecnologia</h3>
-                        <a href="https://padlet.com/lucianojulio1/pec-tecnologia-e-rob-tica-ure-sul-1-yupwzjznhf1qt0nc" target="_blank" class="text-xs font-bold text-gray-400 hover:text-pei-green flex items-center transition-colors group">
-                            <span class="mr-1 group-hover:underline">Ver Padlet</span>
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                        </a>
-                    </div>
-                    <p class="text-sm text-gray-500 mb-2">URE Sul 1</p>
-                    <p class="text-sm text-gray-600 leading-relaxed">Monitoramento de plataformas (Alura/Robótica), formação sobre Material Digital, CAF e elaboração de item COPED.</p>
-                </div>
-
-                <div class="pop-card bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <div class="flex justify-between items-start">
-                        <h3 class="font-bold text-lg text-pei-dark">PEC de Geografia</h3>
-                        <a href="https://padlet.com/lucianojulio1/pec-geografia-2023-1pfxjfg055pkfhts" target="_blank" class="text-xs font-bold text-gray-400 hover:text-pei-green flex items-center transition-colors group">
-                            <span class="mr-1 group-hover:underline">Ver Padlet</span>
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                        </a>
-                    </div>
-                    <p class="text-sm text-gray-500 mb-2">URE Sul 2</p>
-                    <p class="text-sm text-gray-600 leading-relaxed">Formação para implantação de plataformas, suporte aos Coordenadores em tecnologia e análise de dados.</p>
-                </div>
-
-                <div class="pop-card bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 class="font-bold text-lg text-pei-dark">Gestão de Projetos (CIEBP)</h3>
-                    <p class="text-sm text-gray-600 mt-2 leading-relaxed">Formação de professores e PROATECs em Cultura Maker, Programação Descomplicada, Letramento e Cultura Digital.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="dna" class="py-20 bg-pei-dark text-white">
-        <div class="max-w-6xl mx-auto px-6">
-            <div class="grid md:grid-cols-2 gap-10">
-                <div class="pop-card pop-card-dark bg-zinc-800 p-8 rounded-2xl border border-zinc-700 group transition-colors">
-                    <h3 class="text-xl font-bold text-pei-green mb-6 uppercase tracking-wider border-b border-zinc-700 pb-2 group-hover:border-zinc-200">Princípios</h3>
-                    <ul class="space-y-4 text-sm text-gray-300 group-hover:text-gray-300">
-                        <li><strong class="text-white block text-base">4 Pilares da Educação</strong> Aprender a Conhecer, Fazer, Conviver e Ser.</li>
-                        <li><strong class="text-white block text-base">Pedagogia da Presença</strong> Acompanhamento próximo, vínculo real e intencionalidade.</li>
-                        <li><strong class="text-white block text-base">Educação Interdimensional</strong> Preparo pessoal, social e produtivo.</li>
-                        <li><strong class="text-white block text-base">Protagonismo Juvenil</strong> O aluno como sujeito ativo (Princípio Central).</li>
-                    </ul>
-                </div>
-                <div class="pop-card pop-card-dark bg-zinc-800 p-8 rounded-2xl border border-zinc-700 group transition-colors">
-                    <h3 class="text-xl font-bold text-pei-green mb-6 uppercase tracking-wider border-b border-zinc-700 pb-2 group-hover:border-zinc-200">Premissas</h3>
-                    <ul class="space-y-4 text-sm text-gray-300 group-hover:text-gray-300">
-                        <li><strong class="text-white block text-base">Corresponsabilidade</strong> Envolvimento de todos na aprendizagem.</li>
-                        <li><strong class="text-white block text-base">Formação Continuada</strong> Estudo constante em ATPC.</li>
-                        <li><strong class="text-white block text-base">Excelência em Gestão</strong> Uso eficiente de recursos e dados.</li>
-                        <li><strong class="text-white block text-base">Replicabilidade</strong> Documentar e multiplicar práticas exitosas.</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="pdca" class="py-20 bg-gray-50 border-y border-gray-200">
-        <div class="max-w-6xl mx-auto px-6">
-            <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold text-pei-dark mb-4">Metodologia de Gestão (PDCA)</h2>
-                <p class="text-xl font-medium text-emerald-800 max-w-3xl mx-auto">
-                    "Gestão ágil baseada em dados: Correção de rotas imediata com foco absoluto na solução."
-                </p>
-            </div>
-
-            <div class="pop-card pop-card-dark bg-pei-dark text-white p-8 rounded-2xl shadow-xl mb-10 flex flex-col md:flex-row items-center gap-6 border-l-8 border-pei-green group">
-                <div class="text-5xl group-hover:scale-110 transition-transform">🎯</div>
-                <div>
-                    <h3 class="text-2xl font-bold text-white mb-2">Foco na Solução</h3>
-                    <p class="text-gray-300 leading-relaxed group-hover:text-white">
-                        Abandonamos a cultura da justificativa ("o aluno não quer nada") para adotar a cultura da resolução. Diante de um problema, não buscamos culpados, buscamos estratégias de intervenção. O erro é uma oportunidade de <strong>recalcular a rota</strong>.
-                    </p>
-                </div>
-            </div>
-
-            <div class="grid md:grid-cols-4 gap-6">
-                <div class="pop-card bg-white p-6 rounded-xl border-t-4 border-blue-500 shadow-sm bg-white">
-                    <div class="text-4xl font-black text-blue-100 mb-2">P</div>
-                    <h3 class="font-bold text-lg text-pei-dark">Planejar (Plan)</h3>
-                    <p class="text-sm text-gray-600 mt-2">Diagnóstico baseado em dados. Definição de metas claras e Plano de Ação.</p>
-                </div>
-                <div class="pop-card bg-white p-6 rounded-xl border-t-4 border-yellow-500 shadow-sm bg-white">
-                    <div class="text-4xl font-black text-yellow-100 mb-2">D</div>
-                    <h3 class="font-bold text-lg text-pei-dark">Fazer (Do)</h3>
-                    <p class="text-sm text-gray-600 mt-2">Execução do Plano de Melhoria. Mobilização da equipe escolar.</p>
-                </div>
-                <div class="pop-card bg-white p-6 rounded-xl border-t-4 border-red-500 shadow-sm bg-white">
-                    <div class="text-4xl font-black text-red-100 mb-2">C</div>
-                    <h3 class="font-bold text-lg text-pei-dark">Checar (Check)</h3>
-                    <p class="text-sm text-gray-600 mt-2">Monitoramento constante. A ação surtiu efeito? Onde erramos?</p>
-                </div>
-                <div class="pop-card bg-white p-6 rounded-xl border-t-4 border-pei-green shadow-sm bg-white">
-                    <div class="text-4xl font-black text-green-100 mb-2">A</div>
-                    <h3 class="font-bold text-lg text-pei-dark">Agir / Ajustar</h3>
-                    <p class="text-sm text-gray-600 mt-2"><strong>Foco na Solução:</strong> Ajustamos o plano sem buscar culpados, mas sim estratégias para atingir a meta.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="cenario" class="py-20 bg-white">
-        <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
-            <div>
-                <h2 class="text-3xl font-bold text-pei-dark mb-6">Cenário: Alto Desempenho</h2>
-                <div class="flex gap-6 mb-8">
-                    <div class="pop-card bg-gray-50 border border-gray-200 p-4 rounded-lg text-center min-w-[120px] bg-white">
-                        <span class="block text-xs font-bold text-gray-400 uppercase">IDEB 2023</span>
-                        <span class="block text-4xl font-black text-pei-green">5.4</span>
-                    </div>
-                    <div class="pop-card bg-gray-50 border border-gray-200 p-4 rounded-lg text-center min-w-[120px] bg-white">
-                        <span class="block text-xs font-bold text-gray-400 uppercase">IDESP</span>
-                        <span class="block text-4xl font-black text-pei-green">3.64</span>
-                    </div>
-                </div>
-                <div class="pop-card bg-red-50 border-l-4 border-red-500 p-6 bg-white">
-                    <h4 class="font-bold text-red-700 text-lg">O Grande Desafio</h4>
-                    <p class="text-sm text-red-600 mt-2 leading-relaxed">
-                        Desafiar os alunos avançados e garantir o acesso à Universidade via <strong>Provão Paulista Seriado, ENEM e principais Vestibulares</strong>.
-                    </p>
-                </div>
-            </div>
-            
-            <div class="bg-gray-50 p-8 rounded-2xl border border-gray-200">
-                <h3 class="font-bold text-lg mb-6 text-gray-700">4 Eixos Estratégicos</h3>
-                <div class="space-y-4">
-                    <div class="pop-card flex items-center p-4 bg-white rounded-lg shadow-sm border border-gray-100 bg-white">
-                        <span class="bg-pei-green text-white font-bold w-8 h-8 rounded flex items-center justify-center mr-4">1</span>
-                        <div><h4 class="font-bold text-pei-dark">Pedagógico</h4><p class="text-xs text-gray-500">Fluxo e indicadores.</p></div>
-                    </div>
-                    <div class="pop-card flex items-center p-4 bg-white rounded-lg shadow-sm border border-gray-100 bg-white">
-                        <span class="bg-pei-green text-white font-bold w-8 h-8 rounded flex items-center justify-center mr-4">2</span>
-                        <div><h4 class="font-bold text-pei-dark">Clima Escolar</h4><p class="text-xs text-gray-500">Convivência e acolhimento.</p></div>
-                    </div>
-                    <div class="pop-card flex items-center p-4 bg-white rounded-lg shadow-sm border border-gray-100 bg-white">
-                        <span class="bg-pei-green text-white font-bold w-8 h-8 rounded flex items-center justify-center mr-4">3</span>
-                        <div><h4 class="font-bold text-pei-dark">Adm / Financeiro</h4><p class="text-xs text-gray-500">Transparência e recursos.</p></div>
-                    </div>
-                    <div class="pop-card flex items-center p-4 bg-white rounded-lg shadow-sm border border-gray-100 bg-white">
-                        <span class="bg-pei-green text-white font-bold w-8 h-8 rounded flex items-center justify-center mr-4">4</span>
-                        <div><h4 class="font-bold text-pei-dark">Comunicação</h4><p class="text-xs text-gray-500">Vínculos com a comunidade.</p></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="pedagogico" class="py-20 bg-gray-50 border-y border-gray-200">
-        <div class="max-w-6xl mx-auto px-6">
-            <h2 class="text-3xl font-bold text-pei-dark mb-12 border-l-8 border-pei-green pl-4">Estratégia Pedagógica</h2>
-
-            <div class="grid lg:grid-cols-2 gap-10">
-                <div class="pop-card bg-white p-8 rounded-xl shadow-sm border-t-4 border-pei-green bg-white">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-2xl font-bold text-pei-dark">1ª Série</h3>
-                        <span class="text-xs font-bold bg-green-100 text-pei-green px-3 py-1 rounded-full uppercase">Ingressantes</span>
-                    </div>
-                    <h4 class="font-bold text-gray-800 mb-2">Foco: Diagnóstico e Nivelamento</h4>
-                    <p class="text-gray-600 text-sm mb-6 leading-relaxed">
-                        Aplicação de diagnóstica na <strong>1ª semana</strong> para mapear defasagens e garantir a progressão.
-                    </p>
-                    <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
-                        <strong class="block text-pei-green text-sm uppercase mb-3">Agrupamentos Produtivos (OE)</strong>
-                        <ul class="space-y-3 text-sm text-gray-700">
-                            <li class="flex items-start"><span class="mr-2 text-red-500">●</span> <strong>Abaixo do Básico:</strong> Foco em habilidades estruturantes.</li>
-                            <li class="flex items-start"><span class="mr-2 text-yellow-500">●</span> <strong>Básico:</strong> Foco em inferência e interpretação.</li>
-                            <li class="flex items-start"><span class="mr-2 text-green-500">●</span> <strong>Avançado:</strong> Tutoria acadêmica e desafios.</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="pop-card bg-white p-8 rounded-xl shadow-sm border-t-4 border-pei-dark bg-white">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-2xl font-bold text-pei-dark">2ª e 3ª Séries</h3>
-                        <span class="text-xs font-bold bg-gray-100 text-gray-600 px-3 py-1 rounded-full uppercase">Concluintes</span>
-                    </div>
-                    <h4 class="font-bold text-gray-800 mb-2">Foco: Acesso ao Superior</h4>
-                    <ul class="space-y-4 text-sm text-gray-700 mt-4">
-                        <li class="flex items-start gap-3">
-                            <span class="text-pei-green font-bold text-lg">✓</span>
-                            <span><strong>Simulados:</strong> Questões baseadas na Matriz de Referência.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="text-pei-green font-bold text-lg">✓</span>
-                            <span><strong>Provão Paulista:</strong> Monitoramento individual das notas acumuladas ao longo do percurso.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="text-pei-green font-bold text-lg">✓</span>
-                            <span><strong>Prova Ouro e ENEM:</strong> Preparação focada para o ingresso nas universidades públicas.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="text-pei-green font-bold text-lg">✓</span>
-                            <span><strong>Aulões:</strong> Oficinas de redação e revisão.</span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="pop-card mt-10 bg-white border border-gray-200 p-8 rounded-xl flex items-start gap-6 bg-white">
-                <div class="bg-pei-green text-white p-4 rounded-xl text-3xl hidden md:flex items-center justify-center shadow-lg">👨‍🏫</div>
-                <div>
-                    <h3 class="text-xl font-bold text-pei-dark mb-2">O Diretor como Líder Pedagógico</h3>
-                    <p class="text-gray-600 text-sm leading-relaxed">
-                        A rotina do Diretor não se restringe ao <strong>Gabinete</strong>. Inclui <strong>Apoio Presencial em Sala de Aula</strong> sistemático para oferecer feedback formativo aos professores e garantir o clima de aprendizagem.
-                    </p>
-                </div>
-            </div>
-
-            <div class="pop-card mt-8 bg-green-50 border border-green-100 p-8 rounded-xl bg-white">
-                <h3 class="text-xl font-bold text-pei-green mb-4">Educação Especial (Inclusão)</h3>
-                <div class="grid md:grid-cols-3 gap-8 text-sm">
-                    <div>
-                        <strong class="block text-gray-900 mb-1 text-base">Adaptação Real</strong>
-                        <p class="text-gray-700">Materiais desenhados com o PAEE. Adequação curricular.</p>
-                    </div>
-                    <div>
-                        <strong class="block text-gray-900 mb-1 text-base">Nivelamento</strong>
-                        <p class="text-gray-700">Participação ativa nos Clubes Juvenis e Eletivas.</p>
-                    </div>
-                    <div>
-                        <strong class="block text-gray-900 mb-1 text-base">Formação Docente</strong>
-                        <p class="text-gray-700">Capacitação para manejo de sala heterogênea.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="clima" class="py-20 bg-white">
-        <div class="max-w-6xl mx-auto px-6">
-            <h2 class="text-3xl font-bold text-pei-dark mb-12 text-center">O Coração da Escola</h2>
-
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="pop-card p-8 border border-gray-100 rounded-2xl bg-white bg-white">
-                    <span class="text-4xl mb-4 block">🤝</span>
-                    <h3 class="font-bold text-xl mb-3">Acolhimento</h3>
-                    <p class="text-sm text-gray-600 mb-4 leading-relaxed">Estratégia contínua de permanência.</p>
-                    <div class="bg-gray-50 p-3 rounded text-xs text-gray-700 border-l-2 border-pei-green">
-                        <strong>Vice-Direção:</strong> Liderança na mediação de conflitos e assembleias.
-                    </div>
-                </div>
-
-                <div class="pop-card pop-card-dark p-8 bg-pei-dark text-white rounded-2xl shadow-xl transform md:-translate-y-4">
-                    <span class="text-4xl mb-4 block">🧭</span>
-                    <h3 class="font-bold text-xl mb-3 text-pei-green">Projeto de Vida (PV)</h3>
-                    <p class="text-sm text-gray-300 mb-4 leading-relaxed">O eixo central que justifica as ações escolares.</p>
-                    <div class="bg-zinc-800 p-3 rounded text-xs text-gray-300 border border-zinc-700">
-                        <strong>Tutoria:</strong> Acompanhar PV + Notas acadêmicas. Evitar a burocracia do "papel pelo papel".
-                    </div>
-                </div>
-
-                <div class="pop-card p-8 border border-gray-100 rounded-2xl bg-white bg-white">
-                    <span class="text-4xl mb-4 block">🗣️</span>
-                    <h3 class="font-bold text-xl mb-3">Gestão Participativa</h3>
-                    <p class="text-sm text-gray-600 mb-4 leading-relaxed">Grêmio e Líderes atuantes.</p>
-                    <div class="bg-gray-50 p-3 rounded text-xs text-gray-700 border-l-2 border-pei-green">
-                        <strong>Transparência:</strong> Contrato pedagógico claro e decisões compartilhadas.
-                    </div>
-                </div>
-            </div>
-
-            <div id="gestao" class="mt-20 border-t border-gray-100 pt-16">
-                <div class="grid md:grid-cols-2 gap-12">
-                    <div class="pop-card p-6 rounded-xl bg-gray-50 border border-gray-100 bg-white">
-                        <h2 class="text-2xl font-bold text-pei-dark mb-6 flex items-center">
-                            <span class="w-3 h-3 bg-pei-green rounded-full mr-3"></span>
-                            Gestão Administrativa
-                        </h2>
-                        <ul class="space-y-4">
-                            <li class="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
-                                <strong class="block text-gray-800 text-lg mb-1">Gestão Fiscal (PDDE)</strong>
-                                <p class="text-gray-600 text-sm">Execução rigorosa baseada em prioridades pedagógicas. Transparência visual nos murais (Conselho e APM).</p>
-                            </li>
-                            <li class="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
-                                <strong class="block text-gray-800 text-lg mb-1">Zelo Patrimonial</strong>
-                                <p class="text-gray-600 text-sm">Envolvimento dos alunos na conservação. "A escola é sua".</p>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="pop-card p-6 rounded-xl bg-gray-50 border border-gray-100 bg-white">
-                        <h2 class="text-2xl font-bold text-pei-dark mb-6 flex items-center">
-                            <span class="w-3 h-3 bg-pei-green rounded-full mr-3"></span>
-                            Infraestrutura e Rotina
-                        </h2>
-                        <ul class="space-y-4">
-                            <li class="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
-                                <strong class="block text-gray-800 text-lg mb-1">Inspeção Diária</strong>
-                                <p class="text-gray-600 text-sm">O Diretor circula diariamente checando limpeza, manutenção predial e segurança.</p>
-                            </li>
-                            <li class="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
-                                <strong class="block text-gray-800 text-lg mb-1">Cozinha e Merenda</strong>
-                                <p class="text-gray-600 text-sm">Monitoramento rigoroso da qualidade, estoque e higiene.</p>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="comunicacao" class="py-20 bg-white border-t border-gray-200">
-        <div class="max-w-6xl mx-auto px-6 text-center">
-            <h2 class="text-2xl font-bold text-pei-dark mb-10">Comunicação e Marketing Institucional</h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div class="pop-card p-6 bg-gray-50 rounded-xl border border-gray-100 bg-white">
-                    <span class="block font-bold text-gray-800 mb-1 text-lg">Portas Abertas</span>
-                    <span class="text-xs text-gray-500 uppercase tracking-wide">Reuniões bimestrais</span>
-                </div>
-                <div class="pop-card p-6 bg-gray-50 rounded-xl border border-gray-100 bg-white">
-                    <span class="block font-bold text-gray-800 mb-1 text-lg">Redes Sociais</span>
-                    <span class="text-xs text-gray-500 uppercase tracking-wide">Divulgação de Boas Práticas</span>
-                </div>
-                <div class="pop-card p-6 bg-gray-50 rounded-xl border border-gray-100 bg-white">
-                    <span class="block font-bold text-gray-800 mb-1 text-lg">Parcerias</span>
-                    <span class="text-xs text-gray-500 uppercase tracking-wide">Empresas e Universidades</span>
-                </div>
-                <div class="pop-card p-6 bg-gray-50 rounded-xl border border-gray-100 bg-white">
-                    <span class="block font-bold text-gray-800 mb-1 text-lg">Egressos</span>
-                    <span class="text-xs text-gray-500 uppercase tracking-wide">Nivelamento por Proficiência</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="resultados" class="py-20 bg-zinc-900 text-white border-t-8 border-pei-green">
-        <div class="max-w-6xl mx-auto px-6">
-             <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold text-pei-green mb-4">Resultados Consolidados</h2>
-                <p class="text-gray-400 max-w-2xl mx-auto">
-                    A gestão baseada em evidências já apresenta frutos. Abaixo, o consolidado atual do PEI João Ernesto Faggin em relação às metas do SARESP.
-                </p>
-             </div>
-
-             <div class="bg-zinc-800 rounded-2xl p-8 border border-zinc-700 shadow-2xl relative overflow-hidden group">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-pei-green/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-
-                <div class="grid md:grid-cols-2 gap-6 mb-8">
-                    <div class="bg-zinc-900/50 p-5 rounded-xl border border-zinc-600 hover:border-gray-400 transition-colors group/card">
-                        <div class="flex justify-between items-start mb-2">
-                            <h3 class="font-bold text-gray-300 group-hover/card:text-white">📉 Cenário 1: Base Zero</h3>
-                            <span class="text-[10px] uppercase font-bold bg-gray-700 text-gray-300 px-2 py-1 rounded">Piso (Se 9ºA=0)</span>
-                        </div>
-                        <div class="flex justify-between items-end">
-                            <div>
-                                <p class="text-xs text-gray-500">Média Escola</p>
-                                <p class="text-2xl font-black text-white">3.76</p>
-                            </div>
-                            <span class="text-xs font-bold text-blue-400 border border-blue-900 bg-blue-900/20 px-2 py-1 rounded">💎 Superou Diamante</span>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-zinc-900/50 p-5 rounded-xl border border-zinc-600 hover:border-indigo-500 transition-colors group/card">
-                        <div class="flex justify-between items-start mb-2">
-                            <h3 class="font-bold text-gray-300 group-hover/card:text-white">📈 Cenário 2: Base Esperada</h3>
-                            <span class="text-[10px] uppercase font-bold bg-indigo-900 text-indigo-300 px-2 py-1 rounded">Meta (Se 9ºA=3.7)</span>
-                        </div>
-                        <div class="flex justify-between items-end">
-                            <div>
-                                <p class="text-xs text-gray-500">Média Escola</p>
-                                <p class="text-2xl font-black text-indigo-400">4.13</p>
-                            </div>
-                            <span class="text-xs font-bold text-blue-400 border border-blue-900 bg-blue-900/20 px-2 py-1 rounded">💎 Superou Diamante</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="overflow-x-auto mb-8">
-                    <table class="w-full text-sm text-left">
-                        <thead class="text-xs text-gray-500 uppercase border-b border-gray-700">
-                            <tr>
-                                <th class="px-4 py-3">Disciplina</th>
-                                <th class="px-4 py-3 text-right">Meta Diamante</th>
-                                <th class="px-4 py-3 text-right text-white">Resultado</th>
-                                <th class="px-4 py-3 text-center">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-700 text-gray-300">
-                            <tr class="hover:bg-white/5 transition">
-                                <td class="px-4 py-3 font-bold">L. Portuguesa</td>
-                                <td class="px-4 py-3 text-right text-blue-400">4.81</td>
-                                <td class="px-4 py-3 text-right font-bold text-pei-green">4.82</td>
-                                <td class="px-4 py-3 text-center"><span class="px-2 py-1 rounded bg-blue-900/30 text-blue-400 text-xs border border-blue-900">💎 Superou</span></td>
-                            </tr>
-                            <tr class="hover:bg-white/5 transition">
-                                <td class="px-4 py-3 font-bold">L. Inglesa</td>
-                                <td class="px-4 py-3 text-right text-blue-400">4.48</td>
-                                <td class="px-4 py-3 text-right font-bold text-yellow-500">4.25</td>
-                                <td class="px-4 py-3 text-center"><span class="px-2 py-1 rounded bg-yellow-900/30 text-yellow-400 text-xs border border-yellow-900">🏆 Ouro</span></td>
-                            </tr>
-                            <tr class="hover:bg-white/5 transition">
-                                <td class="px-4 py-3 font-bold">História</td>
-                                <td class="px-4 py-3 text-right text-blue-400">3.87</td>
-                                <td class="px-4 py-3 text-right font-bold text-pei-green">4.21</td>
-                                <td class="px-4 py-3 text-center"><span class="px-2 py-1 rounded bg-blue-900/30 text-blue-400 text-xs border border-blue-900">💎 Superou</span></td>
-                            </tr>
-                            <tr class="hover:bg-white/5 transition">
-                                <td class="px-4 py-3 font-bold">Geografia</td>
-                                <td class="px-4 py-3 text-right text-blue-400">3.8</td>
-                                <td class="px-4 py-3 text-right font-bold text-pei-green">3.8</td>
-                                <td class="px-4 py-3 text-center"><span class="px-2 py-1 rounded bg-blue-900/30 text-blue-400 text-xs border border-blue-900">💎 Atingiu</span></td>
-                                  
-                            
-                     </tr>
-                            <tr class="hover:bg-white/5 transition">
-                                <td class="px-4 py-3 font-bold">Matemática</td>
-                                <td class="px-4 py-3 text-right text-blue-400">3.72</td>
-                                <td class="px-4 py-3 text-right font-bold text-pei-green">4.09</td>
-                                <td class="px-4 py-3 text-center"><span class="px-2 py-1 rounded bg-blue-900/30 text-blue-400 text-xs border border-blue-900">💎 Superou</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="text-center">
-                    <a href="https://lucianopectec.github.io/SARESP-2025-FAGGIN/" target="_blank" class="btn-pulse inline-flex items-center gap-3 bg-pei-green hover:bg-emerald-600 text-white font-bold py-4 px-8 rounded-xl transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-green-900/50">
-                        <span>📊 Acessar Painel de BI Completo</span>
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                    </a>
-                    <p class="text-xs text-gray-500 mt-3">Clique para ver os dados detalhados por turma e disciplina.</p>
-                </div>
-             </div>
-        </div>
-    </section>
-
-    <footer class="bg-pei-dark text-white py-16 border-t-4 border-pei-green">
-        <div class="max-w-4xl mx-auto px-6 text-center">
-            <h2 class="text-2xl font-bold mb-2">Vamos transformar a educação juntos?</h2>
-            <p class="text-gray-400 mb-8">Luciano Julio - Candidato a Diretor 2026</p>
-            
-            <p class="text-xs text-gray-600 mt-12">
-                Plano de Trabalho desenvolvido conforme as diretrizes do Programa Ensino Integral (SP).
+  return (
+    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex flex-col h-screen overflow-hidden">
+      
+      {/* Header Fixo */}
+      <header className="bg-white px-6 py-4 shadow-sm border-b border-slate-200 z-20 flex-none">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+              <Briefcase className="text-blue-600" />
+              Gestão de Candidatos
+            </h1>
+            <p className="text-sm text-slate-500 flex items-center gap-1">
+              2ª Fase - DE São José do Rio Preto 
+              <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold ml-2">DADOS ATUALIZADOS</span>
             </p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+             <div className="hidden md:flex flex-col items-end mr-4">
+               <span className="text-xs font-bold text-slate-400 uppercase">Total</span>
+               <span className="text-lg font-bold text-slate-700">{candidates.length}</span>
+             </div>
+             <button onClick={() => window.print()} className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition-colors" title="Imprimir/PDF">
+               <Download size={20} />
+             </button>
+             <div className="h-8 w-px bg-slate-200 mx-1"></div>
+             <div className="flex bg-slate-100 p-1 rounded-lg">
+               <button 
+                onClick={() => setViewMode('table')}
+                className={`p-2 rounded-md transition-all ${viewMode === 'table' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+               >
+                 <List size={20} />
+               </button>
+               <button 
+                onClick={() => setViewMode('cards')}
+                className={`p-2 rounded-md transition-all ${viewMode === 'cards' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+               >
+                 <Grid size={20} />
+               </button>
+             </div>
+          </div>
         </div>
-    </footer>
 
-</body>
-</html>
+        {/* Barra de Ferramentas */}
+        <div className="mt-4 flex flex-col md:flex-row gap-3 justify-between items-center">
+          <div className="relative w-full md:w-96">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+            <input 
+              type="text" 
+              placeholder="Buscar por nome..." 
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <div className="flex gap-2 w-full md:w-auto overflow-x-auto no-scrollbar">
+             {['todos', 'gestor', 'professor'].map((role) => (
+                <button 
+                  key={role}
+                  onClick={() => setFilterRole(role)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors capitalize whitespace-nowrap ${
+                    filterRole === role 
+                    ? 'bg-slate-800 text-white shadow-md' 
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  {role}
+                </button>
+             ))}
+          </div>
+        </div>
+      </header>
 
+      {/* Conteúdo Principal Scrollável */}
+      <main className="flex-1 overflow-hidden p-4 md:p-6">
+        
+        {viewMode === 'table' ? (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 h-full flex flex-col">
+            <div className="overflow-auto flex-1 relative custom-scrollbar">
+              <table className="w-full text-sm text-left border-collapse">
+                <thead className="text-xs text-slate-500 uppercase bg-slate-50 sticky top-0 z-20 shadow-sm font-bold">
+                  <tr>
+                    <th 
+                      onClick={() => requestSort('name')}
+                      className="p-4 sticky left-0 top-0 z-30 bg-slate-50 border-b border-slate-200 w-64 cursor-pointer hover:bg-slate-100 transition-colors shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)]"
+                    >
+                      <div className="flex items-center gap-2">
+                        Candidato
+                        {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? <ChevronUp size={14}/> : <ChevronDown size={14}/>)}
+                      </div>
+                    </th>
+                    <th 
+                      className="p-4 border-b border-slate-200 min-w-[180px]"
+                    >
+                       Origem & Situação
+                    </th>
+                    <th 
+                      onClick={() => requestSort('role')}
+                      className="p-4 border-b border-slate-200 min-w-[120px] cursor-pointer hover:bg-slate-100"
+                    >
+                       <div className="flex items-center gap-2">
+                        Perfil
+                        {sortConfig.key === 'role' && (sortConfig.direction === 'ascending' ? <ChevronUp size={14}/> : <ChevronDown size={14}/>)}
+                      </div>
+                    </th>
+                    <th 
+                      onClick={() => requestSort('expertiseScore')}
+                      className="p-4 border-b border-slate-200 w-28 cursor-pointer hover:bg-slate-100"
+                    >
+                      <div className="flex items-center gap-2">
+                        Expertise
+                        {sortConfig.key === 'expertiseScore' && (sortConfig.direction === 'ascending' ? <ChevronUp size={14}/> : <ChevronDown size={14}/>)}
+                      </div>
+                    </th>
+                    {schoolNames.map((school, idx) => {
+                      const isPei = PEI_SCHOOLS.includes(school);
+                      return (
+                        <th key={idx} className="p-2 border-b border-slate-200 w-12 text-center h-32 align-bottom pb-4 relative group">
+                          <div className={`absolute inset-0 hover:bg-opacity-50 transition-colors z-0 ${isPei ? 'hover:bg-blue-50' : 'hover:bg-slate-50'}`}></div>
+                          <span className={`block relative z-10 whitespace-nowrap transform -rotate-45 origin-bottom-left translate-x-8 -translate-y-2 text-[10px] md:text-xs font-semibold w-32 overflow-visible ${isPei ? 'text-blue-700' : 'text-slate-600'}`}>
+                             {school.replace("EE ", "")}
+                             {isPei && <span className="ml-1 text-blue-600 font-bold text-[10px]">(PEI)</span>}
+                          </span>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {processedCandidates.map((candidate) => (
+                    <tr key={candidate.id} className="hover:bg-slate-50 transition-colors group">
+                      
+                      {/* Nome Fixo */}
+                      <td className="p-4 sticky left-0 bg-white group-hover:bg-slate-50 z-10 border-r border-slate-100 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)]">
+                        <div className="font-bold text-slate-800">{candidate.name}</div>
+                        <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                          <MapPin size={10} /> {candidate.de}
+                        </div>
+                      </td>
 
+                      {/* Origem e Situação */}
+                      <td className="p-4">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                            <Home size={12} className="text-slate-400" />
+                            {candidate.originSchool.replace("EE ", "")}
+                          </div>
+                          {candidate.isCompetingInOrigin && (
+                            <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold w-fit">
+                              <ArrowRight size={10} /> Concorrendo na Sede
+                            </span>
+                          )}
+                        </div>
+                      </td>
 
+                      {/* Perfil */}
+                      <td className="p-4">
+                        <div className="flex flex-col gap-2 items-start">
+                           <button 
+                            onClick={() => toggleRole(candidate.id)}
+                            className={`text-xs px-2 py-0.5 rounded-md border transition-all ${
+                              candidate.role.includes("Gestor") 
+                              ? 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100' 
+                              : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                            }`}
+                          >
+                            {candidate.role}
+                          </button>
+                          
+                          <button 
+                            onClick={() => togglePei(candidate.id)}
+                            className={`text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 transition-all ${
+                              candidate.pei 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                              : 'bg-white text-slate-400 border-slate-200 opacity-60 hover:opacity-100'
+                            }`}
+                          >
+                            {candidate.pei ? <CheckCircle size={10}/> : <XCircle size={10}/>} Exp. PEI
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* Expertise */}
+                      <td className="p-4">
+                         {renderExpertise(candidate.expertiseScore)}
+                      </td>
+
+                      {/* Checkboxes Escolas */}
+                      {schoolNames.map((school, idx) => {
+                        const isRegistered = candidate.schools.includes(school);
+                        const isPei = PEI_SCHOOLS.includes(school);
+                        const isOrigin = candidate.originSchool === school;
+                        
+                        return (
+                          <td key={idx} className={`p-2 text-center border-l border-slate-50 ${isRegistered ? (isPei ? 'bg-blue-50/30' : 'bg-slate-50/50') : ''}`}>
+                            {isRegistered ? (
+                              <div className="flex flex-col items-center justify-center gap-1 group-hover:scale-105 transition-transform">
+                                <span className={`h-5 w-5 flex items-center justify-center rounded-full ${isPei ? 'bg-blue-600 text-white' : 'bg-slate-300 text-slate-600'} shadow-sm`}>
+                                  <CheckCircle size={12} />
+                                </span>
+                                {isOrigin && (
+                                  <span className="text-[9px] font-bold text-blue-600 bg-white px-1 rounded shadow-sm">SEDE</span>
+                                )}
+                              </div>
+                            ) : (
+                              isOrigin ? (
+                                <span className="text-[9px] text-slate-400 font-semibold bg-slate-100 px-1 rounded">Origem</span>
+                              ) : (
+                                <span className="block w-1 h-1 mx-auto rounded-full bg-slate-200"></span>
+                              )
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                  {processedCandidates.length === 0 && (
+                    <tr>
+                      <td colSpan={schoolNames.length + 4} className="p-8 text-center text-slate-400">
+                        Nenhum candidato encontrado com os filtros atuais.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="bg-slate-50 p-3 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center flex-none">
+              <span>* Clique nas colunas para ordenar. Dados de origem simulados para demonstração.</span>
+              <span>{processedCandidates.length} registros</span>
+            </div>
+          </div>
+        ) : (
+          /* MODO CARDS (GRID VIEW) */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-auto pb-20 custom-scrollbar h-full">
+            {processedCandidates.map((candidate) => (
+              <div key={candidate.id} className="bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow p-5 flex flex-col gap-4 relative overflow-hidden">
+                
+                {candidate.isCompetingInOrigin && (
+                   <div className="absolute top-0 right-0 bg-blue-600 text-white text-[9px] font-bold px-2 py-1 rounded-bl-lg z-10">
+                     CONCORRE NA SEDE
+                   </div>
+                )}
+
+                <div className="flex justify-between items-start mt-1">
+                  <div>
+                    <h3 className="font-bold text-slate-800 leading-tight mb-1">{candidate.name}</h3>
+                    <div className="text-xs text-slate-500 flex flex-col gap-1">
+                      <span className="flex items-center gap-1"><MapPin size={10} /> {candidate.de}</span>
+                      <span className="flex items-center gap-1 font-medium text-slate-600">
+                        <Home size={10} /> Origem: {candidate.originSchool.replace("EE ", "")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                   <button 
+                      onClick={() => toggleRole(candidate.id)}
+                      className={`text-xs px-2 py-1 rounded border ${candidate.role.includes("Gestor") ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
+                    >
+                      {candidate.role}
+                    </button>
+                    <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded border border-yellow-100">
+                      {renderExpertise(candidate.expertiseScore)}
+                    </div>
+                </div>
+
+                <div className="border-t border-slate-100 pt-3 mt-auto">
+                  <span className="text-xs font-semibold text-slate-400 uppercase mb-2 block">Escolas ({candidate.schools.length})</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {candidate.schools.map((school, i) => (
+                      <span key={i} className={`text-[10px] px-2 py-1 rounded-full border ${PEI_SCHOOLS.includes(school) ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-slate-50 text-slate-600 border-slate-100'}`}>
+                        {school.replace("EE ", "")}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            ))}
+          </div>
+        )}
+
+      </main>
+    </div>
+  );
+};
+
+export default App;
